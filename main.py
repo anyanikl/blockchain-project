@@ -43,21 +43,15 @@ def print_chain(bc: Blockchain) -> None:
 def make_tx(tx_id: str, tx_type: str, land_id: str, extra: dict = None) -> Transaction:
     """Хелпер: создаёт транзакцию с текущим timestamp."""
     now = int(time.time())
-    tx = Transaction(
+    return Transaction(
         tx_id=tx_id,
         type=tx_type,
         land_id=land_id,
         timestamp=now,
         created_at=now,
         approved_by="registrar-1",
+        extra=extra or {},
     )
-    # Дополнительные поля (owner, buyer и т.п.) кладём через to_dict
-    if extra:
-        d = tx.to_dict()
-        d.update(extra)
-        # Возвращаем объект-обёртку, который ведёт себя как Transaction
-        tx._extra = extra
-    return tx
 
 
 def main() -> None:
@@ -83,10 +77,12 @@ def main() -> None:
     # ------------------------------------------------------------------
     print_separator("FR-12: Добавление транзакций в мемпул")
     tx1 = make_tx("tx-001", "REGISTER_LAND", "L-001", {"owner": "Ivanov"})
-    tx2 = make_tx("tx-002", "REGISTER_LAND", "L-002", {"owner": "Petrov"})
+    print(f"  DEBUG tx1.extra = {tx1.extra}")
+    print(f"  DEBUG tx1.to_dict() = {tx1.to_dict()}")
     bc.add_transaction(tx1)
-    bc.add_transaction(tx2)
+    bc.add_transaction(make_tx("tx-002", "REGISTER_LAND", "L-002", {"owner": "Petrov"}))
     print(f"  Mempool size: {len(bc.get_pending_transactions())}")
+    print(f"  DEBUG mempool[0].to_dict() = {bc.get_pending_transactions()[0].to_dict()}")
 
     # ------------------------------------------------------------------
     # UC-11 / FR-04: майнинг блока
