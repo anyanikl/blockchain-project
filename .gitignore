@@ -221,3 +221,22 @@ __marimo__/
 
 # IDE settings
 .idea/
+
+# ============================================
+# Project-specific (Land Registry Blockchain)
+# ============================================
+
+# Runtime data (blockchain chain is generated at runtime)
+blockchain.json
+blockchain.json.*
+*.json.bak
+
+# SQLite databases (will be used in sprint 3+)
+app.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
