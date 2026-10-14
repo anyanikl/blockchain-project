@@ -221,3 +221,16 @@ __marimo__/
 
 # IDE settings
 .idea/
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+.idea/
+.vscode/
+*.json.bak
