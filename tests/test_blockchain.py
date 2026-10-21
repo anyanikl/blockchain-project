@@ -1,5 +1,4 @@
 """
-tests/test_blockchain.py
 Проверка валидности цепочки: a, b, c.
 """
 
