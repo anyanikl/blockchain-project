@@ -28,8 +28,8 @@ def main():
     print(result)
 
     # 4. Проверяем целостность
-    ok, msg = bc.is_valid()
-    print(f"Валидность цепочки: {ok} — {msg}")
+    report = bc.is_valid()
+    report.print_report()
 
     # 5. Смотрим владельца участка
     print(f"Владелец land-1: {bc.get_land_owner('land-1')}")

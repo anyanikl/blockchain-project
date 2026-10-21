@@ -19,6 +19,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from core.block import Block
 from core.transaction import Transaction
 from storage.json_storage import BlockchainStorage
+from core.validation import ValidationReport, ValidationError
 
 class Blockchain:
     """
@@ -172,38 +173,53 @@ class Blockchain:
     # Проверка целостности (FR-08, UC-13, NFR-01)
     # ------------------------------------------------------------------
 
-    def is_valid(self) -> Tuple[bool, str]:
-        """
-        Проверяет целостность всей цепочки (ТЗ п.9):
-        - пересчитывает hash каждого блока и сравнивает с сохранённым
-        - для каждого блока (кроме genesis) проверяет,
-          что previous_hash == hash предыдущего блока
 
-        Возвращает (True, "OK") или (False, "сообщение с проблемным блоком").
+
+    def is_valid(self) -> ValidationReport:
         """
+        Проверяет целостность всей цепочки (ТЗ п.9, FR-08, FR-14).
+
+        Порядок проверки строго по ТЗ:
+        1) Пересчет hash блока
+        2) Сверка previous_hash с предыдущим блоком
+        3) Пересчет tx_hash внутри блока (напишет напарник)
+
+        НЕ падает на первой ошибке — собирает ВСЕ ошибки (FR-08).
+        """
+        report = ValidationReport()
+
         for i, block in enumerate(self.chain):
-            # 1. Пересчёт хэша блока
+            # --- Шаг 1: Пересчёт хэша блока (4а) ---
             recalculated = block.calculate_hash()
             if recalculated != block.hash:
-                return (
-                    False,
-                    f"Block {i} hash mismatch: "
-                    f"stored={block.hash[:12]}..., "
-                    f"recalculated={recalculated[:12]}...",
-                )
+                report.add_error(ValidationError(
+                    block_index=i,
+                    error_type="BLOCK_HASH_MISMATCH",
+                    expected=recalculated,
+                    actual=block.hash,
+                    description="Хэш блока не совпадает с пересчитанным",
+                ))
 
-            # 2. Проверка связи с предыдущим блоком (кроме genesis)
+            # --- Шаг 2: Проверка связи с предыдущим блоком (4б) ---
             if i > 0:
                 previous_block = self.chain[i - 1]
                 if block.previous_hash != previous_block.hash:
-                    return (
-                        False,
-                        f"Block {i} previous_hash mismatch: "
-                        f"expected={previous_block.hash[:12]}..., "
-                        f"actual={block.previous_hash[:12]}...",
-                    )
+                    report.add_error(ValidationError(
+                        block_index=i,
+                        error_type="PREV_HASH_MISMATCH",
+                        expected=previous_block.hash,
+                        actual=block.previous_hash,
+                        description="previous_hash не совпадает с хэшем предыдущего блока",
+                    ))
 
-        return True, "Chain is valid"
+            # --- Шаг 3: Проверка транзакций (FR-14) ---
+            # TODO: Напарник напишет метод check_transactions_hashes(block) -> List[ValidationError]
+            # Когда напишет, мы раскомментируем эти строки:
+            # tx_errors = self.check_transactions_hashes(block)
+            # for tx_err in tx_errors:
+            #     report.add_error(tx_err)
+
+        return report
 
     # ------------------------------------------------------------------
     # Вспомогательные методы (для 3 спринта — вычисление состояния)
