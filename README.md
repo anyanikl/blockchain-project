@@ -19,4 +19,5 @@
 pip install -r requirements.txt
 pytest
 
+pytest tests/test_sprint3.py -v
 ```
