@@ -213,11 +213,28 @@ class Blockchain:
                     ))
 
             # --- Шаг 3: Проверка транзакций (FR-14) ---
-            # TODO: Напарник напишет метод check_transactions_hashes(block) -> List[ValidationError]
-            # Когда напишет, мы раскомментируем эти строки:
-            # tx_errors = self.check_transactions_hashes(block)
-            # for tx_err in tx_errors:
-            #     report.add_error(tx_err)
+            for j, tx in enumerate(block.transactions):
+                # Нам нужно получить объект транзакции, чтобы вызвать calculate_hash()
+                # Если это словарь (старый формат), конвертируем. Если объект — работаем с ним.
+                if isinstance(tx, dict):
+                    tx_obj = Transaction.from_dict(tx)
+                else:
+                    tx_obj = tx
+
+                # Пересчитываем хэш содержимого
+                recalculated_tx_hash = tx_obj.calculate_hash()
+                stored_tx_hash = getattr(tx_obj, "tx_hash", None)
+
+                # Сравниваем
+                if stored_tx_hash != recalculated_tx_hash:
+                    report.add_error(ValidationError(
+                        block_index=i,
+                        tx_index=j, # передаем индекс транзакции (FR-15)
+                        error_type="TX_HASH_MISMATCH",
+                        expected=recalculated_tx_hash,
+                        actual=str(stored_tx_hash),
+                        description="Хэш транзакции не совпадает с пересчитанным",
+                    ))
 
         return report
 
@@ -226,41 +243,42 @@ class Blockchain:
     # ------------------------------------------------------------------
 
     def get_land_history(self, land_id: str) -> List[Dict[str, Any]]:
-        """
-        История всех транзакций по участку (ТЗ п.4, идея «история участка»).
-        Проходит всю цепочку и фильтрует по land_id.
-        """
         history = []
         for block in self.chain:
             for tx in block.transactions:
-                if tx.get("land_id") == land_id:
+                if hasattr(tx, 'land_id'):
+                    is_match = (tx.land_id == land_id)
+                else:
+                    is_match = (tx.get("land_id") == land_id)
+
+                if is_match:
                     history.append({
                         "block_index": block.index,
                         "block_hash": block.hash,
-                        "transaction": tx,
+                        "transaction": tx.to_dict() if hasattr(tx, 'to_dict') else tx,
                     })
         return history
 
     def get_land_owner(self, land_id: str) -> Optional[str]:
-        """
-        Текущий владелец участка — вычисляется из последней транзакции
-        по этому участку (REGISTER_LAND или SELL_LAND).
-        В блокчейне состояние выводится из истории, а не хранится.
-        """
         owner = None
         for block in self.chain:
             for tx in block.transactions:
-                if tx.get("land_id") != land_id:
-                    continue
-                if tx.get("type") == "REGISTER_LAND":
-                    owner = tx.get("owner")
-                elif tx.get("type") == "SELL_LAND":
-                    owner = tx.get("buyer")
-        return owner
+                if hasattr(tx, 'land_id'):
+                    tx_land_id = tx.land_id
+                    tx_type = tx.type
+                    # Владелец лежит в extra (owner) или (buyer)
+                    tx_owner = tx.extra.get("owner")
+                    tx_buyer = tx.extra.get("buyer")
+                else:
+                    tx_land_id = tx.get("land_id")
+                    tx_type = tx.get("type")
+                    tx_owner = tx.get("owner")
+                    tx_buyer = tx.get("buyer")
 
-    def __repr__(self) -> str:
-        return (
-            f"Blockchain(blocks={len(self.chain)}, "
-            f"mempool={len(self.pending_transactions)}, "
-            f"latest={self.get_latest_block().hash[:8]}...)"
-        )
+                if tx_land_id != land_id:
+                    continue
+                if tx_type == "REGISTER_LAND":
+                    owner = tx_owner
+                elif tx_type == "SELL_LAND":
+                    owner = tx_buyer
+        return owner

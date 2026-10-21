@@ -30,11 +30,26 @@ class Block:
         self.nonce = nonce
         self.hash = self.calculate_hash()
 
+    def _normalize_transactions(self) -> List[Dict[str, Any]]:
+        """
+        Приводит транзакции к списку словарей для корректного JSON-хэширования.
+        Поддерживает как объекты Transaction (3 спринт), так и обычные dict.
+        """
+        result = []
+        for tx in self.transactions:
+            if hasattr(tx, "to_dict"):
+                result.append(tx.to_dict())
+            elif isinstance(tx, dict):
+                result.append(tx)
+            else:
+                result.append(tx)
+        return result
+
     def calculate_hash(self) -> str:
         block_data = {
             "index": self.index,
             "timestamp": self.timestamp,
-            "transactions": self.transactions,
+            "transactions": self._normalize_transactions(),
             "previous_hash": self.previous_hash,
             "nonce": self.nonce,
         }
@@ -45,7 +60,7 @@ class Block:
         return {
             "index": self.index,
             "timestamp": self.timestamp,
-            "transactions": self.transactions,
+            "transactions": self._normalize_transactions(),
             "previous_hash": self.previous_hash,
             "nonce": self.nonce,
             "hash": self.hash,
