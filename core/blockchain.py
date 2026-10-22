@@ -21,6 +21,8 @@ from core.transaction import Transaction
 from storage.json_storage import BlockchainStorage
 from core.validation import ValidationReport, ValidationError
 
+from services.file_service import FileService
+
 class Blockchain:
     """
     Цепочка блоков + мемпул + слой хранения.
@@ -173,18 +175,21 @@ class Blockchain:
     # Проверка целостности (FR-08, UC-13, NFR-01)
     # ------------------------------------------------------------------
 
-
-
-    def is_valid(self) -> ValidationReport:
+    def is_valid(self, check_files: bool = False) -> ValidationReport:
         """
-        Проверяет целостность всей цепочки (ТЗ п.9, FR-08, FR-14).
+        Проверяет целостность всей цепочки (ТЗ п.9, FR-08, FR-14, FR-16).
 
-        Порядок проверки строго по ТЗ:
+        Порядок проверки:
         1) Пересчет hash блока
         2) Сверка previous_hash с предыдущим блоком
-        3) Пересчет tx_hash внутри блока (напишет напарник)
+        3) Пересчет tx_hash внутри блока
+        4) (опционально) Проверка хеша внешнего файла (FR-16)
 
         НЕ падает на первой ошибке — собирает ВСЕ ошибки (FR-08).
+
+        Args:
+            check_files: если True — дополнительно проверяет file_hash
+            для транзакций, у которых он задан.
         """
         report = ValidationReport()
 
@@ -214,8 +219,7 @@ class Blockchain:
 
             # --- Шаг 3: Проверка транзакций (FR-14) ---
             for j, tx in enumerate(block.transactions):
-                # Нам нужно получить объект транзакции, чтобы вызвать calculate_hash()
-                # Если это словарь (старый формат), конвертируем. Если объект — работаем с ним.
+                # Получаем объект Transaction: если словарь — конвертируем, иначе работаем с ним.
                 if isinstance(tx, dict):
                     tx_obj = Transaction.from_dict(tx)
                 else:
@@ -229,12 +233,38 @@ class Blockchain:
                 if stored_tx_hash != recalculated_tx_hash:
                     report.add_error(ValidationError(
                         block_index=i,
-                        tx_index=j, # передаем индекс транзакции (FR-15)
+                        tx_index=j,
                         error_type="TX_HASH_MISMATCH",
                         expected=recalculated_tx_hash,
                         actual=str(stored_tx_hash),
                         description="Хэш транзакции не совпадает с пересчитанным",
                     ))
+
+                # --- Шаг 4: Проверка хеша внешнего файла (FR-16, опционально) ---
+                if check_files and getattr(tx_obj, "file_hash", None):
+                    file_path = tx_obj.extra.get("file_path")
+                    if not file_path:
+                        report.add_error(ValidationError(
+                            block_index=i,
+                            tx_index=j,
+                            error_type="FILE_PATH_MISSING",
+                            expected="file_path в extra",
+                            actual="None",
+                            description="Для проверки file_hash отсутствует путь к файлу",
+                        ))
+                    else:
+                        ok, msg = FileService.verify_external_file(
+                            file_path, tx_obj.file_hash
+                        )
+                        if not ok:
+                            report.add_error(ValidationError(
+                                block_index=i,
+                                tx_index=j,
+                                error_type="FILE_HASH_MISMATCH",
+                                expected=tx_obj.file_hash,
+                                actual=msg,
+                                description="Хэш внешнего файла не совпадает",
+                            ))
 
         return report
 

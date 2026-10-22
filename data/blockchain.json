@@ -215,5 +215,27 @@
     "previous_hash": "b9146b2d99c7041ed434944f86602a8f4aa673bf37c8122aee078fc950a27772",
     "nonce": 0,
     "hash": "ff0eabbc021e44ea0c9106b3b822d22174c517f6bf71dee62cc71960bbfa9c2e"
+  },
+  {
+    "index": 10,
+    "timestamp": 1792680205,
+    "transactions": [
+      {
+        "tx_id": "tx-001",
+        "application_id": null,
+        "type": "REGISTER_LAND",
+        "land_id": "land-1",
+        "timestamp": 1700000000,
+        "created_at": null,
+        "approved_by": "REGISTRAR",
+        "tx_hash": "4c8e6e4ff05e426df3ab581fa9c10620b4bbeb95614914b64fe70c244de79b6b",
+        "owner": "Ivanov",
+        "address": "Lenina 1",
+        "area_sqm": 100.0
+      }
+    ],
+    "previous_hash": "ff0eabbc021e44ea0c9106b3b822d22174c517f6bf71dee62cc71960bbfa9c2e",
+    "nonce": 0,
+    "hash": "43f8a6b0a1a48343828e2de0d1ff0e492517f42bc614480bb168b9b0a19ebe0a"
   }
 ]
