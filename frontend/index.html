@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Земельный реестр</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="header">
+    <div class="logo">
+        <div class="logo-icon">З</div>
+        <div>
+            <h2>Земельный реестр</h2>
+            <p>Участки и история владения</p>
+        </div>
+    </div>
+</header>
+
+<main class="container">
+
+    <section class="intro">
+        <p class="eyebrow">РЕЕСТР ЗЕМЕЛЬНЫХ УЧАСТКОВ</p>
+        <h1>Найдите нужный участок</h1>
+        <p class="intro-text">
+            Посмотрите информацию о земельном участке,
+            его текущем владельце и истории владения.
+        </p>
+    </section>
+
+    <section class="search-panel">
+        <label for="search-input">
+            Название, адрес или номер участка
+        </label>
+
+        <form id="search-form">
+            <input
+                type="text"
+                id="search-input"
+                placeholder="Например, Сосновый берег или 104"
+            >
+            <button type="submit">Найти участок →</button>
+        </form>
+
+        <p class="hint">
+            Введите данные участка, чтобы найти его в реестре.
+        </p>
+    </section>
+
+    <section id="results-section">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">РЕЗУЛЬТАТЫ</p>
+                <h2 id="results-title">Земельные участки</h2>
+            </div>
+            <span id="results-count"></span>
+        </div>
+
+        <div id="results" class="results-grid"></div>
+
+        <div id="empty-state" class="empty-state" hidden>
+            <h3>Участок не найден</h3>
+            <p>
+                Проверьте введённые данные и попробуйте ещё раз.
+            </p>
+        </div>
+    </section>
+
+    <section id="details-section" hidden>
+        <button id="back-button" class="back-button">
+            ← Назад к результатам
+        </button>
+
+        <div class="details-heading">
+            <p class="eyebrow">СВЕДЕНИЯ ОБ УЧАСТКЕ</p>
+            <h2 id="details-title"></h2>
+            <p id="details-address" class="muted"></p>
+        </div>
+
+        <div class="details-grid">
+
+            <div class="info-card">
+                <p class="card-label">ТЕКУЩИЙ ВЛАДЕЛЕЦ</p>
+                <h3 id="current-owner"></h3>
+                <p id="owner-since" class="muted"></p>
+
+                <div class="divider"></div>
+
+                <div class="fact">
+                    <span>Номер участка</span>
+                    <strong id="land-number"></strong>
+                </div>
+
+                <div class="fact">
+                    <span>Площадь</span>
+                    <strong id="land-area"></strong>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <p class="eyebrow">ПЕРЕДАЧА ПРАВ</p>
+                <h3>История владения</h3>
+                <p class="muted">
+                    Предыдущие владельцы и периоды владения.
+                </p>
+
+                <div id="ownership-history" class="timeline"></div>
+            </div>
+
+        </div>
+
+        <p class="demo-note">
+            Демонстрационная версия. Данные пока тестовые.
+        </p>
+    </section>
+
+</main>
+
+<footer class="footer">
+    <span>Земельный реестр</span>
+    <span>Учебный проект</span>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
