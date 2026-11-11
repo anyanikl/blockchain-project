@@ -14,6 +14,7 @@ core/blockchain.py
 """
 
 import time
+import threading
 from typing import List, Dict, Any, Optional, Tuple
 
 from core.block import Block
@@ -37,7 +38,7 @@ class Blockchain:
     def __init__(self, storage_path: str = "blockchain.json"):
         self.storage = BlockchainStorage(storage_path)
         self.pending_transactions: List[Transaction] = []  # мемпул
-
+        self.lock = threading.RLock()
         # UC-15 / FR-10: пробуем загрузить сохранённую цепочку
         if self.storage.exists():
             loaded = self.storage.load()
@@ -312,3 +313,52 @@ class Blockchain:
                 elif tx_type == "SELL_LAND":
                     owner = tx_buyer
         return owner
+
+    # ------------------------------------------------------------------
+    # Сетевое взаимодействие (Спринт 4, Раздел 7)
+    # ------------------------------------------------------------------
+
+    def receive_block(self, block_data: dict) -> Tuple[bool, str, str]:
+        """
+        Принимает блок от другой ноды, проверяет его и добавляет в цепочку.
+        Возвращает: (успех, код_ошибки_или_статуса, сообщение)
+        """
+        from core.block import Block
+
+        # 1. Формат: валидный JSON, есть все поля
+        try:
+            new_block = Block.from_dict(block_data)
+        except (KeyError, TypeError, ValueError):
+            return False, "INVALID_JSON", "Неверный формат блока или отсутствуют поля"
+
+        # 2. hash блока равен пересчитанному (4а)
+        if new_block.hash != new_block.calculate_hash():
+            return False, "BLOCK_HASH_MISMATCH", "Хэш блока не совпадает с пересчитанным"
+
+        # 3. tx_hash каждой транзакции (4в)
+        for tx in new_block.transactions:
+            if isinstance(tx, dict):
+                tx_obj = Transaction.from_dict(tx)
+            else:
+                tx_obj = tx
+
+            stored_tx_hash = getattr(tx_obj, "tx_hash", None)
+            if stored_tx_hash and stored_tx_hash != tx_obj.calculate_hash():
+                return False, "TX_HASH_MISMATCH", "Хэш транзакции не совпадает"
+
+        # 4. Такой блок уже есть?
+        for existing_block in self.chain:
+            if existing_block.hash == new_block.hash:
+                return True, "ALREADY_EXISTS", "Блок уже есть в цепочке"
+
+        # 5. previous_hash равен hash последнего блока (4б)
+        latest_block = self.get_latest_block()
+        if new_block.previous_hash != latest_block.hash:
+            return False, "PREV_HASH_MISMATCH", "Разрыв цепочки (previous_hash не совпадает)"
+
+        # 6. Всё прошло: добавляем под блокировкой
+        with self.lock:
+            self.chain.append(new_block)
+            self.storage.save(self.chain)
+
+        return True, "ACCEPTED", "Блок принят и добавлен в цепочку"

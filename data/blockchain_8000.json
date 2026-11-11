@@ -1,0 +1,21 @@
+[
+  {
+    "index": 0,
+    "timestamp": 1794393734,
+    "transactions": [
+      {
+        "tx_id": "genesis-tx",
+        "application_id": null,
+        "type": "GENESIS",
+        "land_id": null,
+        "timestamp": 1794393734,
+        "created_at": 1794393734,
+        "approved_by": "SYSTEM",
+        "tx_hash": "05de2153b705ed832515ec2493460b016082daeee60dad33d14aa1905f52a879"
+      }
+    ],
+    "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "nonce": 0,
+    "hash": "81c74c233099cb4fec0cdea333962e1b1f6974f4da91f2db1b4d45b249ef7bc7"
+  }
+]
