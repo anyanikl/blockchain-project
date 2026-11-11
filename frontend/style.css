@@ -393,3 +393,138 @@ button[type="submit"]:hover {
         gap: 4px;
     }
 }
+
+.connection-status {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.connection-status.online {
+    color: #477a52;
+}
+
+.connection-status.offline {
+    color: #b45b50;
+}
+
+.registration-section {
+    margin-top: 40px;
+    padding: 25px;
+    background: var(--surface);
+    border-radius: 12px;
+}
+
+.registration-section h2 {
+    margin-bottom: 10px;
+}
+
+.registration-section > p {
+    color: var(--muted);
+    margin-bottom: 20px;
+}
+
+#registration-form {
+    display: grid;
+    gap: 16px;
+    max-width: 500px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.form-group label {
+    font-size: 14px;
+    color: var(--text);
+}
+
+.form-group input {
+    padding: 12px;
+    border: 1px solid #d5d9d0;
+    border-radius: 7px;
+    background: var(--background);
+    color: var(--text);
+    font: inherit;
+}
+
+#registration-message {
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+#registration-message.success {
+    color: #477a52;
+}
+
+#registration-message.error {
+    color: #b45b50;
+}
+
+
+.demo-auth-section {
+    margin: 30px auto;
+    max-width: 500px;
+}
+
+.demo-auth-card {
+    padding: 25px;
+    background: var(--surface);
+    border-radius: 12px;
+}
+
+.demo-auth-card h2 {
+    margin-bottom: 10px;
+}
+
+.demo-auth-card > p {
+    color: var(--muted);
+    margin-bottom: 20px;
+}
+
+.demo-auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 16px;
+}
+
+.demo-auth-field label {
+    color: var(--text);
+    font-size: 14px;
+}
+
+.demo-auth-field input {
+    padding: 12px;
+    border: 1px solid #d5d9d0;
+    border-radius: 7px;
+    background: var(--background);
+    color: var(--text);
+    font: inherit;
+}
+
+.demo-auth-hint {
+    margin-top: 18px;
+    font-size: 14px;
+}
+
+.demo-auth-hint button {
+    border: none;
+    background: none;
+    color: var(--green);
+    cursor: pointer;
+    font: inherit;
+    text-decoration: underline;
+}
+
+#demo-auth-message,
+#demo-register-message {
+    font-size: 14px;
+    margin-top: 12px;
+}
+
+[hidden] {
+    display: none !important;
+}

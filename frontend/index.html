@@ -16,6 +16,9 @@
             <p>Участки и история владения</p>
         </div>
     </div>
+        <div id="connection-status" class="connection-status">
+        Проверяем подключение...
+    </div>
 </header>
 
 <main class="container">
@@ -46,6 +49,143 @@
         <p class="hint">
             Введите данные участка, чтобы найти его в реестре.
         </p>
+    </section>
+
+
+<section id="demo-auth-section" class="demo-auth-section">
+    <div class="demo-auth-card">
+        <h2>Вход в личный кабинет</h2>
+        <p>Войдите, чтобы подать заявку на регистрацию земельного участка.</p>
+
+        <form id="demo-login-form">
+            <div class="demo-auth-field">
+                <label for="demo-email">Электронная почта</label>
+                <input
+                    type="email"
+                    id="demo-email"
+                    placeholder="Введите email"
+                    required
+                >
+            </div>
+
+            <div class="demo-auth-field">
+                <label for="demo-password">Пароль</label>
+                <input
+                    type="password"
+                    id="demo-password"
+                    placeholder="Введите пароль"
+                    required
+                >
+            </div>
+
+            <button type="submit">Войти</button>
+        </form>
+
+        <p id="demo-auth-message"></p>
+
+        <p class="demo-auth-hint">
+            Нет аккаунта?
+            <button type="button" id="demo-show-register">
+                Зарегистрироваться
+            </button>
+        </p>
+    </div>
+</section>
+
+<section id="demo-register-section" class="demo-auth-section" hidden>
+    <div class="demo-auth-card">
+        <h2>Создание аккаунта</h2>
+        <p>Заполните данные для демонстрационной регистрации.</p>
+
+        <form id="demo-register-form">
+            <div class="demo-auth-field">
+                <label for="demo-register-name">ФИО</label>
+                <input type="text" id="demo-register-name" required>
+            </div>
+
+            <div class="demo-auth-field">
+                <label for="demo-register-email">Электронная почта</label>
+                <input type="email" id="demo-register-email" required>
+            </div>
+
+            <div class="demo-auth-field">
+                <label for="demo-register-password">Пароль</label>
+                <input type="password" id="demo-register-password" minlength="4" required>
+            </div>
+
+            <div class="demo-auth-field">
+                <label for="demo-register-confirm">Повторите пароль</label>
+                <input type="password" id="demo-register-confirm" minlength="4" required>
+            </div>
+
+            <button type="submit">Создать аккаунт</button>
+        </form>
+
+        <p id="demo-register-message"></p>
+
+        <p class="demo-auth-hint">
+            Уже есть аккаунт?
+            <button type="button" id="demo-show-login">
+                Войти
+            </button>
+        </p>
+    </div>
+</section>
+
+
+    <section class="registration-section">
+        <button type="button" id="demo-logout">
+            Выйти из аккаунта
+        </button>
+    <h2>Зарегистрировать земельный участок</h2>
+    <p>Заполните данные нового участка для внесения в реестр.</p>
+
+    <form id="registration-form">
+        <div class="form-group">
+            <label for="land-id">Номер участка</label>
+            <input
+                type="text"
+                id="land-id"
+                placeholder="Например, LAND-004"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="owner">ФИО владельца</label>
+            <input
+                type="text"
+                id="owner"
+                placeholder="Например, Иванов Иван Иванович"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="address">Адрес участка</label>
+            <input
+                type="text"
+                id="address"
+                placeholder="Введите адрес участка"
+                required
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="area">Площадь (м²)</label>
+            <input
+                type="number"
+                id="area"
+                placeholder="Например, 1500"
+                min="1"
+                required
+            >
+        </div>
+
+        <button type="submit">Зарегистрировать участок</button>
+    </form>
+
+    <p id="registration-message"></p>
     </section>
 
     <section id="results-section">
@@ -111,7 +251,6 @@
         </div>
 
         <p class="demo-note">
-            Демонстрационная версия. Данные пока тестовые.
         </p>
     </section>
 

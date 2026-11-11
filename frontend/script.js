@@ -1,3 +1,32 @@
+const API_URL = "http://127.0.0.1:8000";
+
+async function checkConnection() {
+    const statusElement = document.querySelector("#connection-status");
+
+    try {
+        const response = await fetch(`${API_URL}/status`);
+
+        if (!response.ok) {
+            throw new Error("Ошибка ответа сервера");
+        }
+
+        const data = await response.json();
+
+        statusElement.textContent = "Сервер подключён";
+        statusElement.className = "connection-status online";
+
+        console.log("Информация о ноде:", data);
+
+    } catch (error) {
+        statusElement.textContent = "Нет подключения к серверу";
+        statusElement.className = "connection-status offline";
+
+        console.error("Ошибка подключения:", error);
+    }
+}
+
+const registrationForm = document.querySelector("#registration-form");
+
 
 const lands = [
     {
@@ -208,3 +237,136 @@ document.querySelector("#back-button").addEventListener("click", () => {
 });
 
 renderResults(lands);
+checkConnection();
+
+
+// ======================================
+// ДЕМОНСТРАЦИОННАЯ АВТОРИЗАЦИЯ
+// ======================================
+
+const authSection = document.querySelector("#demo-auth-section");
+const registerSection = document.querySelector("#demo-register-section");
+const landSection = document.querySelector(".registration-section");
+
+const loginForm = document.querySelector("#demo-login-form");
+const registerForm = document.querySelector("#demo-register-form");
+
+const loginMessage = document.querySelector("#demo-auth-message");
+const registerMessage = document.querySelector("#demo-register-message");
+
+// Данные демонстрационных пользователей
+let demoUsers = JSON.parse(sessionStorage.getItem("demo-users")) || [];
+
+// Тестовый аккаунт для показа проекта
+if (!demoUsers.some(user => user.email === "demo@test.ru")) {
+    demoUsers.push({
+        name: "Демонстрационный пользователь",
+        email: "demo@test.ru",
+        password: "1234"
+    });
+
+    sessionStorage.setItem("demo-users", JSON.stringify(demoUsers));
+}
+
+// Показываем нужный экран
+function showAuthScreen(screen) {
+    authSection.hidden = screen !== "login";
+    registerSection.hidden = screen !== "register";
+    landSection.hidden = screen !== "account";
+}
+
+// Проверяем, есть ли активная сессия
+function checkDemoSession() {
+    const user = JSON.parse(sessionStorage.getItem("demo-user"));
+
+    if (user) {
+        showAuthScreen("account");
+    } else {
+        showAuthScreen("login");
+    }
+}
+
+// Переключение между входом и регистрацией
+document.querySelector("#demo-show-register").addEventListener("click", function() {
+    registerMessage.textContent = "";
+    showAuthScreen("register");
+});
+
+document.querySelector("#demo-show-login").addEventListener("click", function() {
+    loginMessage.textContent = "";
+    showAuthScreen("login");
+});
+
+// Регистрация нового демонстрационного пользователя
+registerForm.addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const name = document.querySelector("#demo-register-name").value.trim();
+    const email = document.querySelector("#demo-register-email").value.trim().toLowerCase();
+    const password = document.querySelector("#demo-register-password").value;
+    const confirmPassword = document.querySelector("#demo-register-confirm").value;
+
+    if (password !== confirmPassword) {
+        registerMessage.textContent = "Пароли не совпадают";
+        return;
+    }
+
+    if (demoUsers.some(user => user.email === email)) {
+        registerMessage.textContent = "Пользователь с таким email уже существует";
+        return;
+    }
+
+    const newUser = {
+        name: name,
+        email: email,
+        password: password
+    };
+
+    demoUsers.push(newUser);
+
+    sessionStorage.setItem("demo-users", JSON.stringify(demoUsers));
+    sessionStorage.setItem("demo-user", JSON.stringify({
+        name: newUser.name,
+        email: newUser.email
+    }));
+
+    registerForm.reset();
+
+    checkDemoSession();
+});
+
+// Вход в аккаунт
+loginForm.addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const email = document.querySelector("#demo-email").value.trim().toLowerCase();
+    const password = document.querySelector("#demo-password").value;
+
+    const user = demoUsers.find(function(item) {
+        return item.email === email && item.password === password;
+    });
+
+    if (!user) {
+        loginMessage.textContent = "Неверная почта или пароль";
+        return;
+    }
+
+    sessionStorage.setItem("demo-user", JSON.stringify({
+        name: user.name,
+        email: user.email
+    }));
+
+    loginForm.reset();
+
+    checkDemoSession();
+});
+
+// Выход из аккаунта
+document.querySelector("#demo-logout").addEventListener("click", function() {
+    sessionStorage.removeItem("demo-user");
+    checkDemoSession();
+});
+
+// При открытии страницы проверяем авторизацию
+checkDemoSession();
+

@@ -13,9 +13,11 @@ from flask import Flask, jsonify
 from core.blockchain import Blockchain
 from network.errors import error_response, ErrorCode
 from network.node_network import NodeNetwork
+from flask_cors import CORS
 
 # Создаем Flask-приложение
 app = Flask(__name__)
+CORS(app)
 
 # Глобальные переменные, которые инициализируются при запуске
 blockchain: Blockchain = None
