@@ -9,7 +9,7 @@ node.py
 
 import argparse
 from flask import Flask, jsonify
-
+import uuid
 from core.blockchain import Blockchain
 from network.errors import error_response, ErrorCode
 from network.node_network import NodeNetwork
@@ -60,16 +60,19 @@ def receive_block():
     Приём нового блока от другой ноды (Раздел 5).
     """
     from flask import request
+    from werkzeug.exceptions import BadRequest  # <--- ДОБАВЬ ИМПОРТ
 
-    block_data = request.get_json()
+    try:
+        block_data = request.get_json()
+    except BadRequest:  # <--- ДОБАВЬ ОБРАБОТКУ
+        return jsonify(error_response(ErrorCode.INVALID_JSON, "Невалидный JSON")), 400
+
     if not block_data:
-        return jsonify(error_response(ErrorCode.INVALID_JSON, "Пустой запрос или неверный JSON")), 400
-
+        return jsonify(error_response(ErrorCode.INVALID_JSON, "Пустой запрос")), 400
     success, code, message = blockchain.receive_block(block_data)
 
     if success:
-        # Если блок уже есть, тоже возвращаем 200 (идемпотентность)
-        if code == "ALREADY_EXISTS":
+        if code == "BLOCK_ALREADY_EXISTS":
             return jsonify({"status": "success", "message": message}), 200
         return jsonify({"status": "success", "message": message}), 200
     else:
@@ -88,9 +91,12 @@ def submit_application():
     if not data:
         return jsonify(error_response(ErrorCode.INVALID_JSON, "Пустое тело запроса")), 400
 
+    if not data.get("land_id") or not data.get("owner"):
+        return jsonify(error_response("MISSING_FIELDS", "Обязательные поля: land_id, owner")), 400
+    # ----------------------
     # Создаем транзакцию из данных UI
     tx = Transaction(
-        tx_id=f"tx-{int(time.time())}",
+        tx_id=f"tx-{uuid.uuid4().hex[:8]}",
         type="REGISTER_LAND",
         land_id=data.get("land_id"),
         timestamp=int(time.time()),

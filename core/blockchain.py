@@ -338,19 +338,25 @@ class Blockchain:
 
         # 3. tx_hash каждой транзакции (4в)
         for tx in new_block.transactions:
-            if isinstance(tx, dict):
+            if not isinstance(tx, dict):
+                return False, "INVALID_JSON", "Неверный формат транзакции"
+
+            stored_tx_hash = tx.get("tx_hash")
+
+            if not stored_tx_hash:
+                return False, "TX_HASH_MISMATCH", "Отсутствует хэш транзакции"
+
+            try:
                 tx_obj = Transaction.from_dict(tx)
-            else:
-                tx_obj = tx
+            except (KeyError, TypeError, ValueError):
+                return False, "INVALID_JSON", "Неверная структура транзакции"
 
-            stored_tx_hash = getattr(tx_obj, "tx_hash", None)
-            if stored_tx_hash and stored_tx_hash != tx_obj.calculate_hash():
+            if stored_tx_hash != tx_obj.calculate_hash():
                 return False, "TX_HASH_MISMATCH", "Хэш транзакции не совпадает"
-
         # 4. Такой блок уже есть?
         for existing_block in self.chain:
             if existing_block.hash == new_block.hash:
-                return True, "ALREADY_EXISTS", "Блок уже есть в цепочке"
+                return True, "BLOCK_ALREADY_EXISTS", "Блок уже есть в цепочке"
 
         # 5. previous_hash равен hash последнего блока (4б)
         latest_block = self.get_latest_block()

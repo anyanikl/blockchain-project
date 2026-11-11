@@ -68,6 +68,14 @@ class Block:
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "Block":
+        # Строгая проверка типов (защита от bool и строк)
+        if type(data.get("index")) is not int:
+            raise ValueError("index должен быть целым числом")
+        if type(data.get("timestamp")) is not int:
+            raise ValueError("timestamp должен быть целым числом")
+        if "nonce" in data and type(data.get("nonce")) is not int:
+            raise ValueError("nonce должен быть целым числом")
+
         block = Block(
             index=data["index"],
             timestamp=data["timestamp"],
