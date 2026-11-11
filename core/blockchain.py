@@ -35,9 +35,10 @@ class Blockchain:
     # Служебная константа: 64 нуля — previous_hash для genesis-блока
     GENESIS_PREVIOUS_HASH = "0" * 64
 
-    def __init__(self, storage_path: str = "blockchain.json"):
+    def __init__(self, storage_path: str = "blockchain.json", peers: list = None):
         self.storage = BlockchainStorage(storage_path)
         self.pending_transactions: List[Transaction] = []  # мемпул
+        self.peers = peers or []
         self.lock = threading.RLock()
         # UC-15 / FR-10: пробуем загрузить сохранённую цепочку
         if self.storage.exists():
@@ -63,7 +64,7 @@ class Blockchain:
         - содержит служебную транзакцию GENESIS
         - hash рассчитывается автоматически
         """
-        now = int(time.time())
+        now = 0
 
         genesis_tx = Transaction(
             tx_id="genesis-tx",

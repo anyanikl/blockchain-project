@@ -12,6 +12,7 @@ from flask import Flask, jsonify
 
 from core.blockchain import Blockchain
 from network.errors import error_response, ErrorCode
+from network.node_network import NodeNetwork
 
 # Создаем Flask-приложение
 app = Flask(__name__)
@@ -75,6 +76,39 @@ def receive_block():
 # Запуск сервера
 # ------------------------------------------------------------------
 
+@app.route("/mine", methods=["POST"])
+def mine():
+    """
+    Создает блок из мемпула и рассылает его пирам (Раздел 4, 5).
+    """
+    from core.transaction import Transaction
+    import time
+
+    tx = Transaction(
+        tx_id=f"tx-{int(time.time())}",
+        type="REGISTER_LAND",
+        land_id=f"land-{int(time.time())}",
+        timestamp=int(time.time()),
+        approved_by="REGISTRAR",
+        extra={"owner": "DemoUser", "address": "Demo St", "area_sqm": 100.0},
+    )
+    blockchain.add_transaction(tx)
+
+    result = blockchain.mine_block("REGISTRAR")
+
+    if result.get("status") == "success":
+        latest_block = blockchain.get_latest_block()
+
+        # Берем пиры из глобальной переменной напрямую
+        current_peers = globals().get("peers", [])
+
+        from network.node_network import NodeNetwork
+        network = NodeNetwork(current_peers)
+        broadcast_results = network.broadcast_block(latest_block.to_dict())
+        result["broadcast"] = broadcast_results
+
+    return jsonify(result)
+
 def main():
     global blockchain, node_id, peers
 
@@ -91,7 +125,7 @@ def main():
 
     # Инициализация блокчейна с уникальным файлом для каждой ноды
     storage_path = f"data/blockchain_{port}.json"
-    blockchain = Blockchain(storage_path=storage_path)
+    blockchain = Blockchain(storage_path=storage_path, peers=peers)
 
     print(f"[{node_id}] Нода запущена на порту {port}")
     print(f"[{node_id}] Пиры: {peers if peers else 'нет'}")
