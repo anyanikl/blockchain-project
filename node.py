@@ -72,10 +72,48 @@ def receive_block():
         return jsonify({"status": "success", "message": message}), 200
     else:
         return jsonify(error_response(code, message)), 400
-# ------------------------------------------------------------------
-# Запуск сервера
-# ------------------------------------------------------------------
 
+@app.route("/submit_application", methods=["POST"])
+def submit_application():
+    """
+    Принимает данные о регистрации участка от UI, создает транзакцию и майнит блок.
+    """
+    from flask import request
+    from core.transaction import Transaction
+    import time
+
+    data = request.get_json()
+    if not data:
+        return jsonify(error_response(ErrorCode.INVALID_JSON, "Пустое тело запроса")), 400
+
+    # Создаем транзакцию из данных UI
+    tx = Transaction(
+        tx_id=f"tx-{int(time.time())}",
+        type="REGISTER_LAND",
+        land_id=data.get("land_id"),
+        timestamp=int(time.time()),
+        approved_by="REGISTRAR",
+        extra={
+            "owner": data.get("owner"),
+            "address": data.get("address"),
+            "area_sqm": data.get("area_sqm"),
+        },
+    )
+    blockchain.add_transaction(tx)
+
+    # Майним блок
+    result = blockchain.mine_block("REGISTRAR")
+
+    # Рассылка блока пирам
+    if result.get("status") == "success":
+        latest_block = blockchain.get_latest_block()
+        current_peers = globals().get("peers", [])
+        from network.node_network import NodeNetwork
+        network = NodeNetwork(current_peers)
+        broadcast_results = network.broadcast_block(latest_block.to_dict())
+        result["broadcast"] = broadcast_results
+
+    return jsonify(result)
 @app.route("/mine", methods=["POST"])
 def mine():
     """

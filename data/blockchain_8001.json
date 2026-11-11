@@ -20,24 +20,24 @@
   },
   {
     "index": 1,
-    "timestamp": 1794396781,
+    "timestamp": 1794397486,
     "transactions": [
       {
-        "tx_id": "tx-1794396781",
+        "tx_id": "tx-1794397486",
         "application_id": null,
         "type": "REGISTER_LAND",
-        "land_id": "land-1794396781",
-        "timestamp": 1794396781,
+        "land_id": "land-999",
+        "timestamp": 1794397486,
         "created_at": null,
         "approved_by": "REGISTRAR",
-        "tx_hash": "3da1e5725533485063e64ee4ec3ca12360c08ceafd4e82e9dd302c720af4c6f7",
-        "owner": "DemoUser",
-        "address": "Demo St",
-        "area_sqm": 100.0
+        "tx_hash": "432b1e9ccffdd04d76a193a6250e1f5eaf782bdc991e20e36fb38a0b73ee2433",
+        "owner": "Petrov",
+        "address": "Tverskaya 5",
+        "area_sqm": 50.0
       }
     ],
     "previous_hash": "db447e160ea1e3e3fbfa16325284779c9c0203c54a2ed0599a97b95c6e4a57ae",
     "nonce": 0,
-    "hash": "3fd8270b6f3884d0b4a9aa0075faa561aa6b24973d9c12b9c9608da1925ae445"
+    "hash": "9db0e53c046d8b709a2f444f3f94d5fa33cd0a4bfb72e8b4be0f9c62b427c0f3"
   }
 ]
