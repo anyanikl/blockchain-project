@@ -5,6 +5,7 @@ tests/test_sprint4_network.py
 Перед запуском должны быть запущены две ноды:
   python node.py --port 8000 --peers http://localhost:8001
   python node.py --port 8001 --peers http://localhost:8000
+  pytest tests/test_sprint4_network.py -v
 """
 
 import pytest
@@ -50,7 +51,6 @@ class TestNetworkPositive:
         assert "index" in data[0]
         assert "hash" in data[0]
         assert "previous_hash" in data[0]
-    @pytest.mark.xfail(reason="BUG-001: эндпоинт GET /blocks/ не реализован")
     def test_tc05_get_block_by_index(self):
         """TC-05: GET /blocks/0 возвращает genesis-блок.
         Ожидается падение из-за отсутствия эндпоинта (BUG-006).
