@@ -54,6 +54,19 @@ def get_blocks():
     return jsonify(blockchain.get_chain_as_dicts())
 
 
+@app.route("/blocks/<int:index>", methods=["GET"])
+def get_block_by_index(index):
+    """
+    Возвращает конкретный блок по его индексу (Раздел 4, 6).
+    """
+    # Проверка, что индекс в пределах цепочки
+    if index < 0 or index >= len(blockchain.get_chain()):
+        return jsonify(error_response("NOT_FOUND", "Блок не найден")), 404
+
+    # Берем блок из цепочки и отдаем в JSON
+    block = blockchain.get_chain()[index]
+    return jsonify(block.to_dict()), 200
+
 @app.route("/receive_block", methods=["POST"])
 def receive_block():
     """
