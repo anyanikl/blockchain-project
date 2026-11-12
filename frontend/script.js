@@ -1,5 +1,6 @@
 const API_URL = "http://127.0.0.1:8000";
 
+
 async function checkConnection() {
     const statusElement = document.querySelector("#connection-status");
 
@@ -26,6 +27,108 @@ async function checkConnection() {
 }
 
 const registrationForm = document.querySelector("#registration-form");
+
+registrationForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
+    // Получаем значения полей формы
+    const landId = document.querySelector("#land-id").value.trim();
+    const owner = document.querySelector("#owner").value.trim();
+    const address = document.querySelector("#address").value.trim();
+    const area = document.querySelector("#area").value.trim();
+
+    const message = document.querySelector("#registration-message");
+
+    // Очищаем предыдущее сообщение
+    message.textContent = "";
+    message.className = "";
+
+    // Проверяем заполнение всех полей
+    if (!landId || !owner || !address || !area) {
+        message.textContent = "Заполните все обязательные поля.";
+        message.className = "error";
+        return;
+    }
+
+    // Проверяем корректность площади
+    if (!Number.isFinite(Number(area)) || Number(area) <= 0) {
+        message.textContent = "Укажите корректную площадь участка.";
+        message.className = "error";
+        return;
+    }
+
+    // Формируем данные для отправки на сервер
+    const landData = {
+        land_id: landId,
+        owner: owner,
+        address: address,
+        area_sqm: Number(area)
+    };
+
+    try {
+        const response = await fetch(`${API_URL}/submit_application`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(landData)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || result.status !== "success") {
+            throw new Error(result.message || result.error || "Не удалось зарегистрировать участок.");
+        }
+
+        message.textContent = "Участок успешно зарегистрирован!";
+        message.className = "success";
+
+        // Добавляем новый участок в общий массив
+        const newLand = {
+            id: landId,
+            name: `Участок № ${landId}`,
+            address: address,
+            area: `${Number(area).toLocaleString("ru-RU")} м²`,
+            currentOwner: owner,
+            since: "Право зарегистрировано только что",
+            history: [
+                {
+                    owner: owner,
+                    period: "С момента регистрации",
+                    event: "Текущий владелец"
+                }
+            ]
+        };
+
+        lands.push(newLand);
+
+        // Обновляем список участков
+        renderResults(lands);
+
+        // Показываем список участков
+        detailsSection.hidden = true;
+        resultsSection.hidden = false;
+
+        // Очищаем поисковую строку
+        searchInput.value = "";
+
+        // Очищаем форму
+        registrationForm.reset();
+
+        // Прокручиваем страницу к списку
+        resultsSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+
+        console.log("Результат регистрации:", result);
+
+    } catch (error) {
+        message.textContent = error.message || "Ошибка при отправке заявки.";
+        message.className = "error";
+
+        console.error("Ошибка регистрации:", error);
+    }
+});
 
 
 const lands = [
@@ -95,6 +198,68 @@ const lands = [
         ]
     }
 ];
+
+
+async function loadLandsFromBlockchain() {
+    try {
+        const response = await fetch(`${API_URL}/blocks`);
+
+        if (!response.ok) {
+            throw new Error("Не удалось загрузить участки из блокчейна.");
+        }
+
+        const blocks = await response.json();
+
+        const blockchainLands = [];
+
+        blocks.forEach(block => {
+            block.transactions.forEach(transaction => {
+
+                if (transaction.type === "REGISTER_LAND") {
+                    const newLand = {
+                        id: transaction.land_id,
+                        name: `Участок № ${transaction.land_id}`,
+                        address: transaction.address,
+                        area: `${Number(transaction.area_sqm).toLocaleString("ru-RU")} м²`,
+                        currentOwner: transaction.owner,
+                        since: "Право зарегистрировано",
+                        history: [
+                            {
+                                owner: transaction.owner,
+                                period: "С момента регистрации",
+                                event: "Текущий владелец"
+                            }
+                        ]
+                    };
+
+                    blockchainLands.push(newLand);
+                }
+
+            });
+        });
+
+        // Объединяем демонстрационные и реальные участки.
+        // Если ID совпадает, оставляем данные из блокчейна.
+        const landsMap = new Map();
+
+        lands.forEach(land => {
+            landsMap.set(String(land.id), land);
+        });
+
+        blockchainLands.forEach(land => {
+            landsMap.set(String(land.id), land);
+        });
+
+        lands.length = 0;
+        lands.push(...landsMap.values());
+
+        renderResults(lands);
+
+    } catch (error) {
+        console.error("Ошибка загрузки участков:", error);
+    }
+}
+
 
 const searchForm = document.querySelector("#search-form");
 const searchInput = document.querySelector("#search-input");
@@ -237,6 +402,7 @@ document.querySelector("#back-button").addEventListener("click", () => {
 });
 
 renderResults(lands);
+loadLandsFromBlockchain();
 checkConnection();
 
 
@@ -247,6 +413,12 @@ checkConnection();
 const authSection = document.querySelector("#demo-auth-section");
 const registerSection = document.querySelector("#demo-register-section");
 const landSection = document.querySelector(".registration-section");
+
+const authModal = document.querySelector("#auth-modal");
+const openLoginButton = document.querySelector("#open-login");
+const closeAuthButton = document.querySelector("#close-auth-modal");
+const openRegistrationButton = document.querySelector("#open-registration");
+
 
 const loginForm = document.querySelector("#demo-login-form");
 const registerForm = document.querySelector("#demo-register-form");
@@ -269,11 +441,51 @@ if (!demoUsers.some(user => user.email === "demo@test.ru")) {
 }
 
 // Показываем нужный экран
+
 function showAuthScreen(screen) {
     authSection.hidden = screen !== "login";
     registerSection.hidden = screen !== "register";
+
+    // Форма регистрации участка доступна только после входа
     landSection.hidden = screen !== "account";
 }
+
+
+// Открываем окно авторизации
+openLoginButton.addEventListener("click", function() {
+    showAuthScreen("login");
+    authModal.hidden = false;
+});
+
+// Закрываем окно по кнопке
+closeAuthButton.addEventListener("click", function() {
+    authModal.hidden = true;
+});
+
+// Закрываем окно при нажатии на затемнённую область
+authModal.addEventListener("click", function(event) {
+    if (event.target === authModal) {
+        authModal.hidden = true;
+    }
+});
+
+// Переход к регистрации земельного участка
+openRegistrationButton.addEventListener("click", function() {
+    const user = JSON.parse(sessionStorage.getItem("demo-user"));
+
+    if (!user) {
+        showAuthScreen("login");
+        authModal.hidden = false;
+        loginMessage.textContent = "Для регистрации участка сначала войдите в аккаунт.";
+        return;
+    }
+
+    landSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+});
+
 
 // Проверяем, есть ли активная сессия
 function checkDemoSession() {
@@ -286,16 +498,21 @@ function checkDemoSession() {
     }
 }
 
-// Переключение между входом и регистрацией
+
+// Переход от входа к созданию аккаунта
 document.querySelector("#demo-show-register").addEventListener("click", function() {
     registerMessage.textContent = "";
+    registerForm.reset();
     showAuthScreen("register");
 });
 
+// Возвращение от создания аккаунта ко входу
 document.querySelector("#demo-show-login").addEventListener("click", function() {
     loginMessage.textContent = "";
+    loginForm.reset();
     showAuthScreen("login");
 });
+
 
 // Регистрация нового демонстрационного пользователя
 registerForm.addEventListener("submit", function(event) {
@@ -333,6 +550,7 @@ registerForm.addEventListener("submit", function(event) {
     registerForm.reset();
 
     checkDemoSession();
+    authModal.hidden = true;
 });
 
 // Вход в аккаунт
@@ -359,14 +577,24 @@ loginForm.addEventListener("submit", function(event) {
     loginForm.reset();
 
     checkDemoSession();
+    authModal.hidden = true;
 });
 
 // Выход из аккаунта
 document.querySelector("#demo-logout").addEventListener("click", function() {
     sessionStorage.removeItem("demo-user");
     checkDemoSession();
+
+    loginMessage.textContent = "";
+    loginForm.reset();
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
 });
 
 // При открытии страницы проверяем авторизацию
+authModal.hidden = true;
 checkDemoSession();
 

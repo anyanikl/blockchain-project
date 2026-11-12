@@ -8,6 +8,7 @@
 </head>
 <body>
 
+
 <header class="header">
     <div class="logo">
         <div class="logo-icon">З</div>
@@ -16,10 +17,22 @@
             <p>Участки и история владения</p>
         </div>
     </div>
+
+    <div class="header-actions">
         <div id="connection-status" class="connection-status">
-        Проверяем подключение...
+            Проверяем подключение...
+        </div>
+
+        <button type="button" id="open-login">
+            Войти
+        </button>
+
+        <button type="button" id="open-registration">
+            Зарегистрировать участок
+        </button>
     </div>
 </header>
+
 
 <main class="container">
 
@@ -52,88 +65,108 @@
     </section>
 
 
-<section id="demo-auth-section" class="demo-auth-section">
-    <div class="demo-auth-card">
-        <h2>Вход в личный кабинет</h2>
-        <p>Войдите, чтобы подать заявку на регистрацию земельного участка.</p>
 
-        <form id="demo-login-form">
-            <div class="demo-auth-field">
-                <label for="demo-email">Электронная почта</label>
-                <input
-                    type="email"
-                    id="demo-email"
-                    placeholder="Введите email"
-                    required
-                >
+<div id="auth-modal" class="auth-modal" hidden>
+    <div class="auth-modal-content">
+
+        <button type="button" id="close-auth-modal" class="close-modal">
+            ×
+        </button>
+
+        <section id="demo-auth-section" class="demo-auth-section">
+            <div class="demo-auth-card">
+                <h2>Вход в личный кабинет</h2>
+                <p>Войдите, чтобы подать заявку на регистрацию земельного участка.</p>
+
+                <form id="demo-login-form">
+                    <div class="demo-auth-field">
+                        <label for="demo-email">Электронная почта</label>
+                        <input type="email" id="demo-email" placeholder="Введите email" required>
+                    </div>
+
+                    <div class="demo-auth-field">
+                        <label for="demo-password">Пароль</label>
+                        <input type="password" id="demo-password" placeholder="Введите пароль" required>
+                    </div>
+
+                    <button type="submit">Войти</button>
+                </form>
+
+                <p id="demo-auth-message"></p>
+
+                <p class="demo-auth-hint">
+                    Нет аккаунта?
+                    <button type="button" id="demo-show-register">
+                        Зарегистрироваться
+                    </button>
+                </p>
             </div>
+        </section>
 
-            <div class="demo-auth-field">
-                <label for="demo-password">Пароль</label>
-                <input
-                    type="password"
-                    id="demo-password"
-                    placeholder="Введите пароль"
-                    required
-                >
+        <section id="demo-register-section" class="demo-auth-section" hidden>
+            <div class="demo-auth-card">
+                <h2>Создание аккаунта</h2>
+                <p>Заполните данные для демонстрационной регистрации.</p>
+
+                <form id="demo-register-form">
+                    <div class="demo-auth-field">
+                        <label for="demo-register-name">ФИО</label>
+                        <input type="text" id="demo-register-name" required>
+                    </div>
+
+                    <div class="demo-auth-field">
+                        <label for="demo-register-email">Электронная почта</label>
+                        <input type="email" id="demo-register-email" required>
+                    </div>
+
+                    <div class="demo-auth-field">
+                        <label for="demo-register-password">Пароль</label>
+                        <input type="password" id="demo-register-password" minlength="4" required>
+                    </div>
+
+                    <div class="demo-auth-field">
+                        <label for="demo-register-confirm">Повторите пароль</label>
+                        <input type="password" id="demo-register-confirm" minlength="4" required>
+                    </div>
+
+                    <button type="submit">Создать аккаунт</button>
+                </form>
+
+                <p id="demo-register-message"></p>
+
+                <p class="demo-auth-hint">
+                    Уже есть аккаунт?
+                    <button type="button" id="demo-show-login">
+                        Войти
+                    </button>
+                </p>
             </div>
+        </section>
 
-            <button type="submit">Войти</button>
-        </form>
-
-        <p id="demo-auth-message"></p>
-
-        <p class="demo-auth-hint">
-            Нет аккаунта?
-            <button type="button" id="demo-show-register">
-                Зарегистрироваться
-            </button>
-        </p>
     </div>
-</section>
+</div>
 
-<section id="demo-register-section" class="demo-auth-section" hidden>
-    <div class="demo-auth-card">
-        <h2>Создание аккаунта</h2>
-        <p>Заполните данные для демонстрационной регистрации.</p>
 
-        <form id="demo-register-form">
-            <div class="demo-auth-field">
-                <label for="demo-register-name">ФИО</label>
-                <input type="text" id="demo-register-name" required>
+    <section id="results-section">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">РЕЗУЛЬТАТЫ</p>
+                <h2 id="results-title">Земельные участки</h2>
             </div>
+            <span id="results-count"></span>
+        </div>
 
-            <div class="demo-auth-field">
-                <label for="demo-register-email">Электронная почта</label>
-                <input type="email" id="demo-register-email" required>
-            </div>
+        <div id="results" class="results-grid"></div>
 
-            <div class="demo-auth-field">
-                <label for="demo-register-password">Пароль</label>
-                <input type="password" id="demo-register-password" minlength="4" required>
-            </div>
+        <div id="empty-state" class="empty-state" hidden>
+            <h3>Участок не найден</h3>
+            <p>
+                Проверьте введённые данные и попробуйте ещё раз.
+            </p>
+        </div>
+    </section>
 
-            <div class="demo-auth-field">
-                <label for="demo-register-confirm">Повторите пароль</label>
-                <input type="password" id="demo-register-confirm" minlength="4" required>
-            </div>
-
-            <button type="submit">Создать аккаунт</button>
-        </form>
-
-        <p id="demo-register-message"></p>
-
-        <p class="demo-auth-hint">
-            Уже есть аккаунт?
-            <button type="button" id="demo-show-login">
-                Войти
-            </button>
-        </p>
-    </div>
-</section>
-
-
-    <section class="registration-section">
+    <section id="registration-section" class="registration-section">
         <button type="button" id="demo-logout">
             Выйти из аккаунта
         </button>
@@ -186,25 +219,6 @@
     </form>
 
     <p id="registration-message"></p>
-    </section>
-
-    <section id="results-section">
-        <div class="section-heading">
-            <div>
-                <p class="eyebrow">РЕЗУЛЬТАТЫ</p>
-                <h2 id="results-title">Земельные участки</h2>
-            </div>
-            <span id="results-count"></span>
-        </div>
-
-        <div id="results" class="results-grid"></div>
-
-        <div id="empty-state" class="empty-state" hidden>
-            <h3>Участок не найден</h3>
-            <p>
-                Проверьте введённые данные и попробуйте ещё раз.
-            </p>
-        </div>
     </section>
 
     <section id="details-section" hidden>

@@ -528,3 +528,118 @@ button[type="submit"]:hover {
 [hidden] {
     display: none !important;
 }
+
+
+/* Шапка сайта */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-actions button {
+    padding: 10px 16px;
+    border: 1px solid var(--green);
+    border-radius: 7px;
+    background: var(--green);
+    color: white;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.header-actions button:hover {
+    background: var(--green-dark);
+}
+
+.header-actions .connection-status {
+    margin: 0 8px 0 0;
+    white-space: nowrap;
+}
+
+/* Кнопка регистрации участка */
+#open-registration {
+    background: transparent;
+    color: var(--green);
+}
+
+#open-registration:hover {
+    background: var(--green-light);
+}
+
+
+/* Затемнение фона */
+.auth-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+    background: rgba(25, 35, 29, 0.55);
+}
+
+/* Содержимое модального окна */
+.auth-modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    max-height: 90vh;
+    overflow-y: auto;
+
+    padding: 25px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.18);
+}
+
+/* Убираем внешние отступы старых карточек */
+.auth-modal .demo-auth-section {
+    margin: 0;
+    max-width: none;
+}
+
+.auth-modal .demo-auth-card {
+    padding: 0;
+    background: transparent;
+}
+
+/* Кнопка закрытия */
+.close-modal {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+
+    width: 34px;
+    height: 34px;
+
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted);
+
+    font-size: 27px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.close-modal:hover {
+    background: var(--green-light);
+    color: var(--green-dark);
+}
+
+/* Отступ для заголовка */
+.auth-modal .demo-auth-card h2 {
+    padding-right: 30px;
+}
