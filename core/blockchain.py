@@ -126,6 +126,20 @@ class Blockchain:
             }
 
         # Шаг 3: создаём новый блок
+        # Проверка перед майнингом (Раздел 5.7, Should)
+        if self.peers:
+            from network.node_network import NodeNetwork
+            network = NodeNetwork(self.peers)
+            for peer_url in self.peers:
+                status = network.get_peer_status(peer_url)
+                if "error" not in status:
+                    peer_length = status.get("chain_length", 0)
+                    if peer_length > len(self.chain):
+                        return {
+                            "status": "error",
+                            "message": "Нода отстает от сети. Сначала выполните синхронизацию (POST /sync).",
+                            "error_code": "CHAIN_BEHIND",
+                        }
         previous_block = self.get_latest_block()
         new_block = Block(
             index=len(self.chain),
