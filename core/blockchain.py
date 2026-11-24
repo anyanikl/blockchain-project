@@ -34,6 +34,7 @@ class Blockchain:
 
     # Служебная константа: 64 нуля — previous_hash для genesis-блока
     GENESIS_PREVIOUS_HASH = "0" * 64
+    GENESIS_TIMESTAMP = 1792000000
 
     def __init__(self, storage_path: str = "blockchain.json", peers: list = None):
         self.storage = BlockchainStorage(storage_path)
@@ -52,9 +53,7 @@ class Blockchain:
         self.chain = [self._create_genesis_block()]
         self.storage.save(self.chain)
 
-    # ------------------------------------------------------------------
     # Genesis
-    # ------------------------------------------------------------------
 
     def _create_genesis_block(self) -> Block:
         """
@@ -64,7 +63,7 @@ class Blockchain:
         - содержит служебную транзакцию GENESIS
         - hash рассчитывается автоматически
         """
-        now = 0
+        now = self.GENESIS_TIMESTAMP
 
         genesis_tx = Transaction(
             tx_id="genesis-tx",
@@ -84,9 +83,7 @@ class Blockchain:
             nonce=0,
         )
 
-    # ------------------------------------------------------------------
     # Мемпул (FR-12)
-    # ------------------------------------------------------------------
 
     def add_transaction(self, tx: Transaction) -> Dict[str, Any]:
         """
@@ -105,9 +102,7 @@ class Blockchain:
         """Возвращает копию мемпула (FR-12)."""
         return self.pending_transactions.copy()
 
-    # ------------------------------------------------------------------
     # Майнинг (UC-11, FR-04)
-    # ------------------------------------------------------------------
 
     def mine_block(self, miner_role: str = "REGISTRAR") -> Dict[str, Any]:
         """
@@ -157,9 +152,7 @@ class Blockchain:
             "tx_count": len(new_block.transactions),
         }
 
-    # ------------------------------------------------------------------
     # Просмотр цепочки (FR-13, UC-12)
-    # ------------------------------------------------------------------
 
     def get_latest_block(self) -> Block:
         """Последний блок цепочки."""
@@ -173,9 +166,7 @@ class Blockchain:
         """Цепочка в виде списка dict — для API/вывода (UC-12)."""
         return [block.to_dict() for block in self.chain]
 
-    # ------------------------------------------------------------------
     # Проверка целостности (FR-08, UC-13, NFR-01)
-    # ------------------------------------------------------------------
 
     def is_valid(self, check_files: bool = False) -> ValidationReport:
         """
@@ -270,9 +261,7 @@ class Blockchain:
 
         return report
 
-    # ------------------------------------------------------------------
     # Вспомогательные методы (для 3 спринта — вычисление состояния)
-    # ------------------------------------------------------------------
 
     def get_land_history(self, land_id: str) -> List[Dict[str, Any]]:
         history = []
@@ -315,57 +304,84 @@ class Blockchain:
                     owner = tx_buyer
         return owner
 
-    # ------------------------------------------------------------------
     # Сетевое взаимодействие (Спринт 4, Раздел 7)
-    # ------------------------------------------------------------------
 
-    def receive_block(self, block_data: dict) -> Tuple[bool, str, str]:
+    def validate_incoming_block(self, block_data: dict) -> Tuple[bool, str, str]:
         """
-        Принимает блок от другой ноды, проверяет его и добавляет в цепочку.
-        Возвращает: (успех, код_ошибки_или_статуса, сообщение)
+        Единый конвейер валидации входящего блока (Раздел 5.3 ТЗ).
+        Используется и для push (прием от пира), и для pull (догоняющая синхронизация).
+
+        Возвращает: (is_valid, error_code, message)
         """
         from core.block import Block
 
-        # 1. Формат: валидный JSON, есть все поля
+        # --- Шаг 1: Формат JSON и наличие обязательных полей ---
         try:
             new_block = Block.from_dict(block_data)
         except (KeyError, TypeError, ValueError):
             return False, "INVALID_JSON", "Неверный формат блока или отсутствуют поля"
 
-        # 2. hash блока равен пересчитанному (4а)
-        if new_block.hash != new_block.calculate_hash():
+        # --- Шаг 2: Пересчет hash блока ---
+        recalculated = new_block.calculate_hash()
+        if recalculated != new_block.hash:
             return False, "BLOCK_HASH_MISMATCH", "Хэш блока не совпадает с пересчитанным"
 
-        # 3. tx_hash каждой транзакции (4в)
+        # --- Шаг 3: Проверка tx_hash каждой транзакции ---
         for tx in new_block.transactions:
             if not isinstance(tx, dict):
                 return False, "INVALID_JSON", "Неверный формат транзакции"
-
             stored_tx_hash = tx.get("tx_hash")
-
             if not stored_tx_hash:
                 return False, "TX_HASH_MISMATCH", "Отсутствует хэш транзакции"
-
             try:
                 tx_obj = Transaction.from_dict(tx)
             except (KeyError, TypeError, ValueError):
                 return False, "INVALID_JSON", "Неверная структура транзакции"
-
             if stored_tx_hash != tx_obj.calculate_hash():
                 return False, "TX_HASH_MISMATCH", "Хэш транзакции не совпадает"
-        # 4. Такой блок уже есть?
+
+        # --- Шаг 4: Дубликат блока ---
         for existing_block in self.chain:
             if existing_block.hash == new_block.hash:
                 return True, "BLOCK_ALREADY_EXISTS", "Блок уже есть в цепочке"
 
-        # 5. previous_hash равен hash последнего блока (4б)
+        # --- Шаг 5: Проверка previous_hash ---
         latest_block = self.get_latest_block()
         if new_block.previous_hash != latest_block.hash:
-            return False, "PREV_HASH_MISMATCH", "Разрыв цепочки (previous_hash не совпадает)"
+            # Здесь добавляем различие: если индекс блока больше, чем у нас — мы отстали
+            if new_block.index > len(self.chain):
+                return False, "CHAIN_BEHIND", "Нода отстала: пропущены блоки"
+            elif new_block.index < len(self.chain):
+                return False, "FORK_DETECTED", "Обнаружен форк: блок из другой ветки"
+            else:
+                return False, "PREV_HASH_MISMATCH", "Разрыв цепочки (previous_hash не совпадает)"
 
-        # 6. Всё прошло: добавляем под блокировкой
+        # --- Шаг 6: Все проверки пройдены ---
+        return True, "VALID", "Блок валиден"
+
+    def receive_block(self, block_data: dict) -> Tuple[bool, str, str]:
+        """
+        Принимает блок от другой ноды, валидирует и добавляет в цепочку.
+        Возвращает: (успех, код_ошибки_или_статуса, сообщение)
+        """
+        # Вызываем единый валидатор
+        is_valid, code, message = self.validate_incoming_block(block_data)
+
+        # Если валидация не пройдена — отклоняем
+        if not is_valid:
+            return False, code, message
+
+        # Если блок уже есть — сообщаем об этом (идемпотентность)
+        if code == "BLOCK_ALREADY_EXISTS":
+            return True, code, message
+
+        # Блок валиден — добавляем в цепочку под блокировкой
+        from core.block import Block
+        new_block = Block.from_dict(block_data)
+
         with self.lock:
             self.chain.append(new_block)
             self.storage.save(self.chain)
 
         return True, "ACCEPTED", "Блок принят и добавлен в цепочку"
+
