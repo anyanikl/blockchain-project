@@ -77,14 +77,14 @@ class SyncManager:
     # Один цикл опроса пиров
 
     def _poll_peers_once(self) -> None:
-        """Опрашивает всех пиров и обновляет их статус."""
+        """Опрашивает всех пиров и, если отстаём — запускает догон."""
         peers = self.peer_registry.get_all_peers()
         if not peers:
             self._node_state = "synced"
             return
 
         best_chain_length = len(self.blockchain.get_chain())
-        best_peer_url = None
+        best_peer = None
 
         for peer in peers:
             status = self.node_network.get_peer_status(peer.url)
@@ -95,9 +95,7 @@ class SyncManager:
                 if self._fail_counts[peer.url] >= MAX_FAIL_COUNT and peer.status != "offline":
                     self.peer_registry.update_status(peer.url, "offline")
                     self.event_log.add(
-                        level="WARNING",
-                        category="NETWORK",
-                        code="PEER_UNREACHABLE",
+                        level="WARNING", category="NETWORK", code="PEER_UNREACHABLE",
                         message=f"Пир {peer.url} недоступен (3 неудачи)",
                         source_node=peer.node_id,
                     )
@@ -105,25 +103,33 @@ class SyncManager:
                 # Пир ответил
                 if peer.status == "offline":
                     self.event_log.add(
-                        level="INFO",
-                        category="NETWORK",
-                        code="PEER_RECOVERED",
+                        level="INFO", category="NETWORK", code="PEER_RECOVERED",
                         message=f"Пир {peer.url} снова онлайн",
                         source_node=peer.node_id,
                     )
                 self._fail_counts[peer.url] = 0
-                self.peer_registry.update_status(peer.url, "online", last_seen=int(time.time()))
-
-                # Сравниваем цепочки
                 peer_chain_length = status.get("chain_length", 0)
+                self.peer_registry.update_status(
+                    peer.url, "online",
+                    last_seen=int(time.time()),
+                    chain_length=peer_chain_length,
+                )
+
                 if peer_chain_length > best_chain_length:
                     best_chain_length = peer_chain_length
-                    best_peer_url = peer.url
+                    best_peer = peer
 
         # Определяем node_state
         our_length = len(self.blockchain.get_chain())
         if best_chain_length > our_length:
             self._node_state = "behind"
+            if best_peer:
+                self.event_log.add(
+                    level="INFO", category="SYNC", code="SYNC_TRIGGERED",
+                    message=f"Отстаём от {best_peer.url} (у нас {our_length}, у пира {best_chain_length}). Запуск pull.",
+                    source_node=best_peer.node_id,
+                )
+                self.sync_from_peer(best_peer)
         else:
             self._node_state = "synced"
             self._last_sync_at = int(time.time())
@@ -132,39 +138,33 @@ class SyncManager:
 
     def get_node_state(self) -> str:
         """
-        Вычисляет текущее состояние ноды с приоритетом (Раздел 3.2):
-        corrupted > fork_detected > syncing > behind > synced
+        Вычисляет состояние БЕЗ сетевых запросов (чтобы не было рекурсии).
+        Приоритет: corrupted > fork_detected > syncing > behind > synced.
         """
-        # 1. Если цепочка повреждена — corrupted (самый высокий приоритет)
+        # 1. corrupted
         report = self.blockchain.is_valid()
         if not report.is_valid:
             return "corrupted"
 
-        # 2. Если идет синхронизация прямо сейчас — syncing
+        # 2. syncing
         if self._syncing:
             return "syncing"
 
-        # 3. Если обнаружен форк (флаг мог быть выставлен в sync_from_peer)
+        # 3. fork_detected
         if self._node_state == "fork_detected":
             return "fork_detected"
 
-        # 4. Если мы отстаем от кого-то из пиров — behind
-        peers = self.peer_registry.get_online_peers()
+        # 4. behind — по ДАННЫМ ИЗ peer_registry (без HTTP!)
         our_length = len(self.blockchain.get_chain())
-        for peer in peers:
-            status = self.node_network.get_peer_status(peer.url)
-            if "error" not in status:
-                peer_length = status.get("chain_length", 0)
-                if peer_length > our_length:
-                    return "behind"
+        for peer in self.peer_registry.get_all_peers():
+            # Используем chain_length, сохранённый pull-циклом
+            peer_length = getattr(peer, "chain_length", 0) or 0
+            if peer.status == "online" and peer_length > our_length:
+                return "behind"
 
-        # 5. Если есть незавершенные предложения — consensus_pending
+        # 5. consensus_pending
         if self.consensus_manager and self.consensus_manager.get_pending_proposals():
             return "consensus_pending"
-
-        # 6. Если пиров нет — leader_offline
-        if not peers:
-            return "leader_offline"
 
         return "synced"
 
@@ -318,6 +318,10 @@ class SyncManager:
                         "blocks_added": 0,
                         "message": f"Синхронизация прервана на блоке #{index}: {code}"
                     }
+
+                # ✅ Если блок уже есть — пропускаем (не добавляем повторно)
+                if code == "BLOCK_ALREADY_EXISTS":
+                    continue
 
                 # Добавляем блок
                 from core.block import Block

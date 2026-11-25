@@ -81,6 +81,7 @@ class Blockchain:
             transactions=[genesis_tx.to_dict()],
             previous_hash=self.GENESIS_PREVIOUS_HASH,
             nonce=0,
+            status="confirmed",
         )
 
     # Мемпул (FR-12)
@@ -337,20 +338,18 @@ class Blockchain:
 
     # Сетевое взаимодействие (Спринт 4, Раздел 7)
 
-    def validate_incoming_block(self, block_data: dict) -> Tuple[bool, str, str]:
-        """
-        Единый конвейер валидации входящего блока (Раздел 5.3 ТЗ).
-        Используется и для push (прием от пира), и для pull (догоняющая синхронизация).
-
-        Возвращает: (is_valid, error_code, message)
-        """
+    def validate_incoming_block(self, block_data: dict, require_confirmed: bool = True) -> Tuple[bool, str, str]:
         from core.block import Block
 
-        # --- Шаг 1: Формат JSON и наличие обязательных полей ---
+        # --- Шаг 1: Формат JSON ---
         try:
             new_block = Block.from_dict(block_data)
         except (KeyError, TypeError, ValueError):
             return False, "INVALID_JSON", "Неверный формат блока или отсутствуют поля"
+
+        # --- Шаг 1.5: Блок должен быть подтверждён (для /receive_block и pull) ---
+        if require_confirmed and new_block.status != "confirmed":
+            return False, "BLOCK_NOT_CONFIRMED", "Блок ещё не подтверждён кворумом"
 
         # --- Шаг 2: Пересчет hash блока ---
         recalculated = new_block.calculate_hash()

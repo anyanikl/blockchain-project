@@ -56,18 +56,18 @@ class Proposal:
 
 
 class ConsensusManager:
-    def __init__(self, node_id: str, is_leader: bool = False):
+    def __init__(self, node_id: str, is_leader: bool = False, data_dir: str = "data"):
         self.node_id = node_id
         self.is_leader = is_leader
+        self.consensus_file = f"{data_dir}/pending_proposals_{node_id}.json"
         self.proposals: Dict[str, Proposal] = {}
         self._load()
 
     def _load(self) -> None:
-        """Загружает незавершенные предложения из файла."""
-        if not os.path.exists(CONSENSUS_FILE):
+        if not os.path.exists(self.consensus_file):
             return
         try:
-            with open(CONSENSUS_FILE, "r", encoding="utf-8") as f:
+            with open(self.consensus_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 for p_data in data:
                     proposal = Proposal.from_dict(p_data)
@@ -77,9 +77,8 @@ class ConsensusManager:
             self.proposals = {}
 
     def _save(self) -> None:
-        """Сохраняет незавершенные предложения в файл."""
         data = [p.to_dict() for p in self.proposals.values() if p.status == "pending"]
-        with open(CONSENSUS_FILE, "w", encoding="utf-8") as f:
+        with open(self.consensus_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
     def create_proposal(self, block_data: dict, leader_id: str) -> Proposal:
@@ -128,3 +127,32 @@ class ConsensusManager:
         """Удаляет подтвержденные предложения (после фиксации в цепочке)."""
         self.proposals = {k: v for k, v in self.proposals.items() if v.status == "pending"}
         self._save()
+
+    def has_voted(self, proposal_id: str, voter_id: str) -> bool:
+        """Проверяет, голосовал ли уже этот узел за предложение."""
+        proposal = self.proposals.get(proposal_id)
+        if not proposal:
+            return False
+        return voter_id in proposal.votes
+
+    def commit_proposal(self, proposal_id: str, final_block_data: dict) -> Optional[Proposal]:
+        """
+        Фиксация предложения после кворума (вызывается на ВСЕХ нодах при /commit).
+        Помечает proposal как confirmed и сохраняет финальные данные блока.
+        """
+        proposal = self.proposals.get(proposal_id)
+        if not proposal:
+            return None
+        proposal.status = "confirmed"
+        proposal.block_data = final_block_data
+        self._save()
+        return proposal
+
+    def reject_proposal(self, proposal_id: str, reason: str) -> Optional[Proposal]:
+        """Помечает предложение отклонённым (тайм-аут или отказ)."""
+        proposal = self.proposals.get(proposal_id)
+        if not proposal:
+            return None
+        proposal.status = "rejected"
+        self._save()
+        return proposal

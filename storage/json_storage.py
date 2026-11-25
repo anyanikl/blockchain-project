@@ -58,6 +58,9 @@ class BlockchainStorage:
 
             chain = self._migrate_transactions(chain)
 
+            if chain:
+                chain[0].status = "confirmed"
+
             return chain
         except (FileNotFoundError, json.JSONDecodeError, KeyError):
             return []

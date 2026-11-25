@@ -10,31 +10,33 @@ import os
 from typing import List, Dict, Any
 
 
+# sync/peer_registry.py
 class Peer:
-    """
-    Информация об одном пире (другой ноде).
-    """
-    def __init__(self, node_id: str, url: str, last_seen: int = 0, status: str = "unknown"):
+    def __init__(self, node_id: str, url: str, last_seen: int = 0,
+                 status: str = "unknown", chain_length: int = 0):
         self.node_id = node_id
         self.url = url
         self.last_seen = last_seen
-        self.status = status  # unknown, online, offline, incompatible
+        self.status = status
+        self.chain_length = chain_length   # ← новое
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self):
         return {
             "node_id": self.node_id,
             "url": self.url,
             "last_seen": self.last_seen,
             "status": self.status,
+            "chain_length": self.chain_length,
         }
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]) -> "Peer":
+    def from_dict(data):
         return Peer(
             node_id=data.get("node_id", ""),
             url=data.get("url", ""),
             last_seen=data.get("last_seen", 0),
             status=data.get("status", "unknown"),
+            chain_length=data.get("chain_length", 0),
         )
 
 
@@ -72,13 +74,15 @@ class PeerRegistry:
         self.peers.append(peer)
         self.save()
 
-    def update_status(self, url: str, status: str, last_seen: int = None) -> None:
-        """Обновляет статус и время последнего ответа пира."""
+    def update_status(self, url: str, status: str, last_seen: int = None,
+                      chain_length: int = None) -> None:
         for peer in self.peers:
             if peer.url == url:
                 peer.status = status
                 if last_seen is not None:
                     peer.last_seen = last_seen
+                if chain_length is not None:
+                    peer.chain_length = chain_length
                 self.save()
                 return
 
