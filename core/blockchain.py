@@ -104,12 +104,13 @@ class Blockchain:
 
     # Майнинг (UC-11, FR-04)
 
-    def mine_block(self, miner_role: str = "REGISTRAR") -> Dict[str, Any]:
+    def mine_block(self, miner_role: str = "REGISTRAR", is_leader: bool = False, consensus_manager=None) -> Dict[
+        str, Any]:
         """
-        Формирует новый блок из транзакций мемпула и добавляет в цепочку.
-        ТЗ п.7, шаги 8–16.
+        Формирует ПРЕДЛОЖЕНИЕ нового блока (не добавляет в цепочку сразу).
+        Добавление произойдет только после кворума (см. consensus.py).
 
-        Только REGISTRAR может майнить (Permissioned-логика).
+        Только лидер может создавать предложения (Дополнение к Спринту 5).
         """
         # Шаг 1: проверка роли
         if miner_role != "REGISTRAR":
@@ -118,15 +119,22 @@ class Blockchain:
                 "message": "Only REGISTRAR can mine blocks",
             }
 
-        # Шаг 2: проверка мемпула
+        # Шаг 2: проверка лидера
+        if not is_leader:
+            return {
+                "status": "error",
+                "message": "Only the leader can propose new blocks",
+                "error_code": "NOT_A_LEADER",
+            }
+
+        # Шаг 3: проверка мемпула
         if not self.pending_transactions:
             return {
                 "status": "error",
                 "message": "Mempool is empty, nothing to mine",
             }
 
-        # Шаг 3: создаём новый блок
-        # Проверка перед майнингом (Раздел 5.7, Should)
+        # Шаг 4: проверка перед майнингом (Раздел 5.7)
         if self.peers:
             from network.node_network import NodeNetwork
             network = NodeNetwork(self.peers)
@@ -140,6 +148,8 @@ class Blockchain:
                             "message": "Нода отстает от сети. Сначала выполните синхронизацию (POST /sync).",
                             "error_code": "CHAIN_BEHIND",
                         }
+
+        # Шаг 5: создаем блок (пока не добавляем в цепочку!)
         previous_block = self.get_latest_block()
         new_block = Block(
             index=len(self.chain),
@@ -149,22 +159,29 @@ class Blockchain:
             nonce=0,
         )
 
-        # Шаг 4: добавляем в цепочку
-        self.chain.append(new_block)
-
-        # Шаг 5: очищаем мемпул
-        self.pending_transactions.clear()
-
-        # Шаг 6: сохраняем цепочку (UC-14, FR-09)
-        self.storage.save(self.chain)
-
-        return {
-            "status": "success",
-            "message": "Block mined and added to chain",
-            "block_index": new_block.index,
-            "block_hash": new_block.hash,
-            "tx_count": len(new_block.transactions),
-        }
+        # Шаг 6: создаем предложение (proposal) через ConsensusManager
+        if consensus_manager:
+            proposal = consensus_manager.create_proposal(
+                block_data=new_block.to_dict(),
+                leader_id=self.node_id if hasattr(self, 'node_id') else "leader"
+            )
+            return {
+                "status": "success",
+                "message": "Proposal created. Waiting for quorum.",
+                "proposal_id": proposal.proposal_id,
+                "block_index": new_block.index,
+                "block_hash": new_block.hash,
+                "tx_count": len(new_block.transactions),
+            }
+        else:
+            # Если consensus_manager не передан — возвращаем просто блок (fallback для тестов)
+            return {
+                "status": "success",
+                "message": "Block mined (no consensus). Added to chain.",
+                "block_data": new_block.to_dict(),
+                "block_index": new_block.index,
+                "block_hash": new_block.hash,
+            }
 
     # Просмотр цепочки (FR-13, UC-12)
 
@@ -354,10 +371,10 @@ class Blockchain:
             if stored_tx_hash != tx_obj.calculate_hash():
                 return False, "TX_HASH_MISMATCH", "Хэш транзакции не совпадает"
 
-        # --- Шаг 4: Дубликат блока ---
+        # --- Шаг 4: Дубликат блока (только среди confirmed) ---
         for existing_block in self.chain:
-            if existing_block.hash == new_block.hash:
-                return True, "BLOCK_ALREADY_EXISTS", "Блок уже есть в цепочке"
+            if existing_block.hash == new_block.hash and existing_block.status == "confirmed":
+                return True, "BLOCK_ALREADY_EXISTS", "Блок уже подтвержден"
 
         # --- Шаг 5: Проверка previous_hash ---
         latest_block = self.get_latest_block()

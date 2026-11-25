@@ -27,6 +27,7 @@ class SyncManager:
         node_network: NodeNetwork,
         blockchain,  # ссылка на Blockchain, чтобы брать chain_length и genesis_hash
         node_id: str,
+        consensus_manager=None,
     ):
         self.peer_registry = peer_registry
         self.event_log = event_log
@@ -40,6 +41,7 @@ class SyncManager:
         self._syncing: bool = False
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        self.consensus_manager = consensus_manager
 
     # Запуск / остановка фонового потока
 
@@ -156,7 +158,14 @@ class SyncManager:
                 if peer_length > our_length:
                     return "behind"
 
-        # 5. Иначе — synced
+        # 5. Если есть незавершенные предложения — consensus_pending
+        if self.consensus_manager and self.consensus_manager.get_pending_proposals():
+            return "consensus_pending"
+
+        # 6. Если пиров нет — leader_offline
+        if not peers:
+            return "leader_offline"
+
         return "synced"
 
     def get_last_sync_at(self) -> int:
@@ -225,6 +234,40 @@ class SyncManager:
         # Запускаем догоняющую синхронизацию
         return self.sync_from_peer(best_peer)
 
+    def process_vote(self, proposal_id: str, voter_id: str, vote: str) -> Dict[str, Any]:
+        """Обрабатывает голос от другой ноды."""
+        if not self.consensus_manager:
+            return {"status": "error", "message": "ConsensusManager не инициализирован"}
+
+        proposal = self.consensus_manager.add_vote(proposal_id, voter_id, vote)
+        if not proposal:
+            return {"status": "error", "message": "Предложение не найдено"}
+
+        if proposal.status == "confirmed":
+            from core.block import Block
+            new_block = Block.from_dict(proposal.block_data)
+            new_block.status = "confirmed"  # <--- ВАЖНО: ставим статус confirmed
+            with self.blockchain.lock:
+                self.blockchain.chain.append(new_block)
+                self.blockchain.storage.save(self.blockchain.chain)
+            self.consensus_manager.clear_confirmed()
+            self.event_log.add(level="INFO", category="CONSENSUS", code="QUORUM_REACHED",
+                               message=f"Блок #{new_block.index} подтвержден кворумом")
+            return {"status": "success", "message": "Block confirmed and added", "block_index": new_block.index}
+
+        return {"status": "success", "message": f"Vote added. Status: {proposal.status}", "votes": proposal.votes}
+
+    def check_timeouts(self):
+        """Проверяет и откатывает просроченные предложения."""
+        if not self.consensus_manager:
+            return
+        now = int(time.time())
+        for proposal in self.consensus_manager.get_pending_proposals():
+            if now - proposal.created_at > 30:  # 30 секунд
+                proposal.status = "rejected"
+                self.consensus_manager._save()
+                self.event_log.add(level="WARNING", category="CONSENSUS", code="CONSENSUS_TIMEOUT", message=f"Предложение {proposal.proposal_id} отклонено по тайм-ауту")
+
     def sync_from_peer(self, peer: Peer) -> Dict[str, Any]:
         """
         Догоняет конкретного пира, запрашивая блоки по одному.
@@ -250,6 +293,9 @@ class SyncManager:
                 if "error" in block_data:
                     # Блок не найден (пир закончился) — выходим
                     break
+
+                if block_data.get("status") != "confirmed":
+                    continue
 
                 # Валидируем блок
                 is_valid, code, message = self.blockchain.validate_incoming_block(block_data)

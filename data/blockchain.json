@@ -16,7 +16,8 @@
     ],
     "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
     "nonce": 0,
-    "hash": "db447e160ea1e3e3fbfa16325284779c9c0203c54a2ed0599a97b95c6e4a57ae"
+    "hash": "db447e160ea1e3e3fbfa16325284779c9c0203c54a2ed0599a97b95c6e4a57ae",
+    "status": "pending"
   },
   {
     "index": 1,
@@ -38,7 +39,8 @@
     ],
     "previous_hash": "db447e160ea1e3e3fbfa16325284779c9c0203c54a2ed0599a97b95c6e4a57ae",
     "nonce": 0,
-    "hash": "fdb4bd5b9f757ce02f9d3ba2ddd4ece86f64ec2c2db6f84321d78210ed0453a4"
+    "hash": "fdb4bd5b9f757ce02f9d3ba2ddd4ece86f64ec2c2db6f84321d78210ed0453a4",
+    "status": "pending"
   },
   {
     "index": 2,
@@ -60,7 +62,8 @@
     ],
     "previous_hash": "fdb4bd5b9f757ce02f9d3ba2ddd4ece86f64ec2c2db6f84321d78210ed0453a4",
     "nonce": 0,
-    "hash": "739cc5cdc4036bc4dc6db13db4c1a38cee088b2447facd95eaee54127749a195"
+    "hash": "739cc5cdc4036bc4dc6db13db4c1a38cee088b2447facd95eaee54127749a195",
+    "status": "pending"
   },
   {
     "index": 3,
@@ -82,6 +85,7 @@
     ],
     "previous_hash": "739cc5cdc4036bc4dc6db13db4c1a38cee088b2447facd95eaee54127749a195",
     "nonce": 0,
-    "hash": "3f046e326935a137609f34ca130e06bb4f56554e8ae1fa9a3ff9c7ff04b6f6a0"
+    "hash": "3f046e326935a137609f34ca130e06bb4f56554e8ae1fa9a3ff9c7ff04b6f6a0",
+    "status": "pending"
   }
 ]

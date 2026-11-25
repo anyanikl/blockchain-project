@@ -22,13 +22,16 @@ class Block:
         transactions: List[Dict[str, Any]],
         previous_hash: str,
         nonce: int = 0,
+        status="pending",
     ):
         self.index = index
         self.timestamp = timestamp
         self.transactions = transactions
         self.previous_hash = previous_hash
         self.nonce = nonce
+        self.status = status
         self.hash = self.calculate_hash()
+
 
     def _normalize_transactions(self) -> List[Dict[str, Any]]:
         """
@@ -64,6 +67,7 @@ class Block:
             "previous_hash": self.previous_hash,
             "nonce": self.nonce,
             "hash": self.hash,
+            "status": self.status,
         }
 
     @staticmethod
@@ -82,6 +86,7 @@ class Block:
             transactions=data["transactions"],
             previous_hash=data["previous_hash"],
             nonce=data.get("nonce", 0),
+            status=data.get("status", "pending"),
         )
         block.hash = data["hash"]
         return block
